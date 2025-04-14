@@ -1,4 +1,5 @@
 from deep_translator import GoogleTranslator
+from tqdm import tqdm
 import re
 
 # File paths
@@ -9,11 +10,10 @@ def translate_text(text, source_lang='auto', target_lang='bn'):
     try:
         return GoogleTranslator(source=source_lang, target=target_lang).translate(text)
     except Exception as e:
-        print(f"⚠️ Translation failed: {e}")
-        return text  # Fallback to original
+        print(f⚠️ Translation failed: {e}")
+        return text
 
 def split_lines(text, original_line_count):
-    # Try to preserve line count and readability
     sentences = re.split(r'(?<=[।!?])\s+', text)
     if len(sentences) < original_line_count:
         sentences += [''] * (original_line_count - len(sentences))
@@ -22,13 +22,13 @@ def split_lines(text, original_line_count):
 def process_block(block):
     lines = block.strip().splitlines()
     if len(lines) < 3:
-        return block  # Leave untouched if not standard block
+        return block
 
     index, time_range, *text_lines = lines
     original_text = " ".join(text_lines)
     translated_text = translate_text(original_text)
-
     final_lines = split_lines(translated_text, len(text_lines))
+
     return "\n".join([index, time_range] + final_lines)
 
 def main():
@@ -36,12 +36,16 @@ def main():
         content = infile.read()
 
     blocks = content.strip().split("\n\n")
-    translated_blocks = [process_block(block) for block in blocks]
+
+    # Show progress bar
+    translated_blocks = []
+    for block in tqdm(blocks, desc="🔄 Translating subtitles", unit="block"):
+        translated_blocks.append(process_block(block))
 
     with open(output_file, "w", encoding="utf-8") as outfile:
         outfile.write("\n\n".join(translated_blocks))
 
-    print(f"✅ Translation complete! File saved as: {output_file}")
+    print(f"\n✅ Translation complete! File saved as: {output_file}")
 
 if __name__ == "__main__":
     main()
