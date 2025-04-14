@@ -4,6 +4,16 @@ import re
 from deep_translator import GoogleTranslator
 from tqdm import tqdm
 
+# Grab supported languages from the translator
+SUPPORTED_LANGS = GoogleTranslator().get_supported_languages(as_dict=True)
+LANG_CODE_MAP = {v: k for k, v in SUPPORTED_LANGS.items()}
+
+def format_supported_languages():
+    lines = []
+    for lang_name, lang_code in sorted(SUPPORTED_LANGS.items(), key=lambda x: x[1]):
+        lines.append(f"{lang_name.title()} ({lang_code})")
+    return "\n".join(lines)
+
 def translate_text(text, source_lang='auto', target_lang='bn'):
     try:
         return GoogleTranslator(source=source_lang, target=target_lang).translate(text)
@@ -36,34 +46,31 @@ def get_output_filename(input_file, target_lang):
 def main():
     parser = argparse.ArgumentParser(description="Translate an SRT file to any language.")
     parser.add_argument("input_file", help="Path to the input .srt file")
-    parser.add_argument("--lang", "-l", default="bn", help="Target language code (default: bn for Bangla)")
+    parser.add_argument("--lang", "-l", default="bn", help="Target language code (default: bn for Bengali)")
     args = parser.parse_args()
 
     input_file = args.input_file
     target_lang = args.lang
-    output_file = get_output_filename(input_file, target_lang)
 
     if not os.path.isfile(input_file):
         print(f"❌ File not found: {input_file}")
         return
 
-    SUPPORTED_LANGS = [
-        'bn', 'hi', 'en', 'ar', 'fr', 'es', 'de', 'ja', 'ko', 'ru', 'zh-CN'
-    ]
-
-    if target_lang not in SUPPORTED_LANGS:
-        print(f"❌ Language '{target_lang}' not supported.")
-        print("✅ Try one of:", ", ".join(SUPPORTED_LANGS))
+    if target_lang not in LANG_CODE_MAP:
+        print(f"\n❌ '{target_lang}' is not a supported language code.\n")
+        print("✅ Try one of the supported languages below:\n")
+        print(format_supported_languages())
         return
 
+    output_file = get_output_filename(input_file, target_lang)
 
     with open(input_file, "r", encoding="utf-8") as infile:
         content = infile.read()
 
     blocks = content.strip().split("\n\n")
-
     translated_blocks = []
-    for block in tqdm(blocks, desc=f"🔄 Translating to [{target_lang}]", unit="block"):
+
+    for block in tqdm(blocks, desc=f"🔄 Translating to [{LANG_CODE_MAP[target_lang]}]", unit="block"):
         translated_blocks.append(process_block(block, target_lang))
 
     with open(output_file, "w", encoding="utf-8") as outfile:
